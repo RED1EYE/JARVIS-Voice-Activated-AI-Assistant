@@ -139,17 +139,3 @@ textMIT License © RED1EYE
 Author
 RED1EYE
 GitHub • Built with passion on MSI Sword 15
-
-JARVIS is ready. Say the word.
-text---
-
-### How to Add This on GitHub (Browser)
-
-1. Go to: [https://github.com/RED1EYE/JARVIS-Voice-Activated-AI-Assistant](https://github.com/RED1EYE/JARVIS-Voice-Activated-AI-Assistant)
-2. Click on `README.md`
-3. Click the **pencil icon** (Edit this file)
-4. **Select all** (Ctrl+A) → **Delete**
-5. **Paste** the entire block above
-6. Scroll down → Write commit message: `Update README with professional design`
-7. Click **Commit changes**
-
