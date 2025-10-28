@@ -92,7 +92,7 @@ textJARVIS-Voice-Activated-AI-Assistant/
 ├── README.md              This file
 ├── .gitignore             Ignores logs, audio, venv
 └── debug.log              Runtime logs (ignored)
-
+Jarvi.py is for API based approach,much faster than LLM.(Using Groq API)
 Configuration
 Edit jarvis_config.json:
 json{
