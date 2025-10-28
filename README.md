@@ -153,6 +153,3 @@ text---
 6. Scroll down → Write commit message: `Update README with professional design`
 7. Click **Commit changes**
 
-**Done!** Your GitHub repo now looks **stunning and professional**.
-
-Let me know when it's live — I’ll help you add a **demo video or GIF** next!
