@@ -130,7 +130,7 @@ pipeline {
                     echo.
                     echo Requirements:
                     echo - Ollama with Qwen3:4B model
-                    echo - CUDA-capable GPU (recommended^)
+                    echo - CUDA-capable GPU recommended
                     echo - Picovoice Access Key
                     echo - PyAudio and PortAudio
                     echo.
