@@ -165,8 +165,10 @@ pipeline {
                     echo echo Make sure Ollama is running: ollama serve
                     echo python jarvis.py
                     ) > dist\\start_jarvis.bat
-                    tar -czf jarvis-build-%BUILD_NUMBER%.tar.gz dist/
-                    echo Package created: jarvis-build-%BUILD_NUMBER%.tar.gz
+                '''
+                powershell '''
+                    Compress-Archive -Path .\\dist\\* -DestinationPath "jarvis-build-$env:BUILD_NUMBER.zip" -Force
+                    Write-Host "Package created: jarvis-build-$env:BUILD_NUMBER.zip"
                 '''
             }
         }
@@ -174,7 +176,7 @@ pipeline {
         stage('Archive Artifacts') {
             steps {
                 echo 'Archiving build artifacts...'
-                archiveArtifacts artifacts: 'jarvis-build-*.tar.gz,BUILD_INFO.txt,bandit-report.json', 
+                archiveArtifacts artifacts: 'jarvis-build-*.zip,BUILD_INFO.txt,bandit-report.json', 
                                  fingerprint: true,
                                  allowEmptyArchive: true
             }
@@ -186,10 +188,13 @@ pipeline {
             }
             steps {
                 echo 'Deploying to test environment...'
-                bat '''
-                    if not exist "%JENKINS_HOME%\\test-deployments\\jarvis-%BUILD_NUMBER%" mkdir "%JENKINS_HOME%\\test-deployments\\jarvis-%BUILD_NUMBER%"
-                    tar -xzf jarvis-build-%BUILD_NUMBER%.tar.gz -C "%JENKINS_HOME%\\test-deployments\\jarvis-%BUILD_NUMBER%"
-                    echo Deployed to: %JENKINS_HOME%\\test-deployments\\jarvis-%BUILD_NUMBER%
+                powershell '''
+                    $deployPath = "$env:JENKINS_HOME\\test-deployments\\jarvis-$env:BUILD_NUMBER"
+                    if (!(Test-Path $deployPath)) {
+                        New-Item -ItemType Directory -Path $deployPath -Force | Out-Null
+                    }
+                    Expand-Archive -Path "jarvis-build-$env:BUILD_NUMBER.zip" -DestinationPath $deployPath -Force
+                    Write-Host "Deployed to: $deployPath"
                 '''
             }
         }
