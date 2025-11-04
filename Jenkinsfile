@@ -107,8 +107,11 @@ pipeline {
                     pip install pytest pytest-cov pytest-mock
                     if not exist tests (
                         mkdir tests
-                        echo # Add your tests here > tests\\__init__.py
-                        echo def test_placeholder(): assert True > tests\\test_jarvis.py
+                        type nul > tests\\__init__.py
+                        (
+                        echo def test_placeholder^(^):
+                        echo     assert True
+                        ) > tests\\test_jarvis.py
                     )
                     pytest tests\\ --cov=. --cov-report=xml --cov-report=html || echo No tests to run yet
                 '''
