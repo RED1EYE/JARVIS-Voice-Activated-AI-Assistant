@@ -3,7 +3,6 @@ pipeline {
     
     environment {
         PYTHON_VERSION = '3.11'
-        VENV_DIR = 'venv'
         PROJECT_NAME = 'JARVIS-Voice-Activated-AI-Assistant'
         // Add your Picovoice access key as Jenkins credential
         PICOVOICE_ACCESS_KEY = credentials('picovoice-access-key')
@@ -14,19 +13,19 @@ pipeline {
             steps {
                 echo 'Checking out code from repository...'
                 checkout scm
-                sh 'git branch'
-                sh 'git log -1'
+                bat 'git branch'
+                bat 'git log -1'
             }
         }
         
         stage('Setup Python Environment') {
             steps {
                 echo 'Setting up Python virtual environment...'
-                sh '''
-                    python${PYTHON_VERSION} -m venv ${VENV_DIR}
-                    . ${VENV_DIR}/bin/activate
+                bat '''
+                    python -m venv venv
+                    call venv\\Scripts\\activate.bat
                     python --version
-                    pip install --upgrade pip
+                    python -m pip install --upgrade pip
                 '''
             }
         }
@@ -35,16 +34,12 @@ pipeline {
             steps {
                 echo 'Checking if Ollama service is running...'
                 script {
-                    def ollamaStatus = sh(
-                        script: 'curl -s http://localhost:11434/api/tags || echo "not running"',
-                        returnStatus: true
-                    )
-                    
-                    if (ollamaStatus != 0) {
+                    try {
+                        bat 'curl -s http://localhost:11434/api/tags'
+                        echo 'Ollama service is running'
+                    } catch (Exception e) {
                         echo 'Warning: Ollama service may not be running'
                         echo 'Ensure Ollama is installed and running: ollama serve'
-                    } else {
-                        echo 'Ollama service is running'
                     }
                 }
             }
@@ -53,16 +48,11 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo 'Installing Python dependencies...'
-                sh '''
-                    . ${VENV_DIR}/bin/activate
-                    
-                    # Install basic requirements
+                bat '''
+                    call venv\\Scripts\\activate.bat
                     pip install -r requirements.txt
-                    
-                    # Install PyTorch with CUDA support (adjust based on your system)
                     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-                    
-                    echo "Dependencies installed successfully"
+                    echo Dependencies installed successfully
                 '''
             }
         }
@@ -70,17 +60,11 @@ pipeline {
         stage('Code Quality Check') {
             steps {
                 echo 'Running code quality checks...'
-                sh '''
-                    . ${VENV_DIR}/bin/activate
-                    
-                    # Install linting tools
+                bat '''
+                    call venv\\Scripts\\activate.bat
                     pip install pylint flake8 black
-                    
-                    # Run flake8 for linting (allowing some warnings)
-                    flake8 jarvis.py --max-line-length=120 --ignore=E501,W503 || true
-                    
-                    # Check code formatting with black
-                    black --check jarvis.py || echo "Code formatting suggestions available"
+                    flake8 jarvis.py --max-line-length=120 --ignore=E501,W503 || exit 0
+                    black --check jarvis.py || echo Code formatting suggestions available
                 '''
             }
         }
@@ -88,20 +72,11 @@ pipeline {
         stage('Security Scan') {
             steps {
                 echo 'Running security vulnerability scan...'
-                sh '''
-                    . ${VENV_DIR}/bin/activate
-                    
-                    # Install bandit for security checks
-                    pip install bandit
-                    
-                    # Run security scan
-                    bandit -r . -f json -o bandit-report.json || true
-                    
-                    # Install safety for dependency vulnerability check
-                    pip install safety
-                    
-                    # Check for known security vulnerabilities
-                    safety check --json || true
+                bat '''
+                    call venv\\Scripts\\activate.bat
+                    pip install bandit safety
+                    bandit -r . -f json -o bandit-report.json || exit 0
+                    safety check --json || exit 0
                 '''
             }
         }
@@ -109,22 +84,17 @@ pipeline {
         stage('Configuration Validation') {
             steps {
                 echo 'Validating configuration files...'
-                sh '''
-                    . ${VENV_DIR}/bin/activate
-                    
-                    # Check if jarvis_config.json exists
-                    if [ -f jarvis_config.json ]; then
-                        echo "Configuration file found"
-                        python -c "import json; json.load(open('jarvis_config.json'))" && echo "Valid JSON" || echo "Invalid JSON"
-                    else
-                        echo "Warning: jarvis_config.json not found, creating default..."
-                        echo '{"start_mode": "normal"}' > jarvis_config.json
-                    fi
-                    
-                    # Validate Python syntax
+                bat '''
+                    call venv\\Scripts\\activate.bat
+                    if exist jarvis_config.json (
+                        echo Configuration file found
+                        python -c "import json; json.load(open('jarvis_config.json'))" && echo Valid JSON || echo Invalid JSON
+                    ) else (
+                        echo Warning: jarvis_config.json not found, creating default...
+                        echo {"start_mode": "normal"} > jarvis_config.json
+                    )
                     python -m py_compile jarvis.py
-                    
-                    echo "Configuration validation completed"
+                    echo Configuration validation completed
                 '''
             }
         }
@@ -132,21 +102,15 @@ pipeline {
         stage('Unit Tests') {
             steps {
                 echo 'Running unit tests...'
-                sh '''
-                    . ${VENV_DIR}/bin/activate
-                    
-                    # Install testing frameworks
+                bat '''
+                    call venv\\Scripts\\activate.bat
                     pip install pytest pytest-cov pytest-mock
-                    
-                    # Create basic test structure if tests don't exist
-                    if [ ! -d "tests" ]; then
-                        mkdir -p tests
-                        echo "# Add your tests here" > tests/__init__.py
-                        echo "def test_placeholder(): assert True" > tests/test_jarvis.py
-                    fi
-                    
-                    # Run tests with coverage
-                    pytest tests/ --cov=. --cov-report=xml --cov-report=html || echo "No tests to run yet"
+                    if not exist tests (
+                        mkdir tests
+                        echo # Add your tests here > tests\\__init__.py
+                        echo def test_placeholder(): assert True > tests\\test_jarvis.py
+                    )
+                    pytest tests\\ --cov=. --cov-report=xml --cov-report=html || echo No tests to run yet
                 '''
             }
         }
@@ -154,35 +118,29 @@ pipeline {
         stage('Build Documentation') {
             steps {
                 echo 'Generating documentation...'
-                sh '''
-                    . ${VENV_DIR}/bin/activate
-                    
-                    # Create a simple documentation summary
-                    cat << EOF > BUILD_INFO.txt
-Build Information
-=================
-Project: ${PROJECT_NAME}
-Build Number: ${BUILD_NUMBER}
-Build ID: ${BUILD_ID}
-Build Date: $(date)
-Git Commit: $(git rev-parse HEAD)
-Git Branch: $(git rev-parse --abbrev-ref HEAD)
-Python Version: $(python --version)
-
-Requirements:
-- Ollama with Qwen3:4B model
-- CUDA-capable GPU (recommended)
-- Picovoice Access Key
-- PyAudio and PortAudio
-
-Setup Instructions:
-1. Install Ollama and run: ollama serve
-2. Pull Qwen3:4B model: ollama pull qwen3:4b
-3. Configure Picovoice access key in jarvis.py
-4. Run: python jarvis.py
-
-EOF
-                    cat BUILD_INFO.txt
+                bat '''
+                    call venv\\Scripts\\activate.bat
+                    (
+                    echo Build Information
+                    echo =================
+                    echo Project: %PROJECT_NAME%
+                    echo Build Number: %BUILD_NUMBER%
+                    echo Build ID: %BUILD_ID%
+                    echo Build Date: %DATE% %TIME%
+                    echo.
+                    echo Requirements:
+                    echo - Ollama with Qwen3:4B model
+                    echo - CUDA-capable GPU (recommended^)
+                    echo - Picovoice Access Key
+                    echo - PyAudio and PortAudio
+                    echo.
+                    echo Setup Instructions:
+                    echo 1. Install Ollama and run: ollama serve
+                    echo 2. Pull Qwen3:4B model: ollama pull qwen3:4b
+                    echo 3. Configure Picovoice access key in jarvis.py
+                    echo 4. Run: python jarvis.py
+                    ) > BUILD_INFO.txt
+                    type BUILD_INFO.txt
                 '''
             }
         }
@@ -190,32 +148,22 @@ EOF
         stage('Package Application') {
             steps {
                 echo 'Creating application package...'
-                sh '''
-                    . ${VENV_DIR}/bin/activate
-                    
-                    # Create distribution directory
-                    mkdir -p dist
-                    
-                    # Copy necessary files
-                    cp jarvis.py dist/
-                    cp jarvis_config.json dist/ || echo '{"start_mode": "normal"}' > dist/jarvis_config.json
-                    cp requirements.txt dist/
-                    cp README.md dist/ || true
-                    cp BUILD_INFO.txt dist/
-                    
-                    # Create a startup script
-                    cat << 'EOF' > dist/start_jarvis.sh
-#!/bin/bash
-echo "Starting JARVIS Voice Assistant..."
-echo "Make sure Ollama is running: ollama serve"
-python jarvis.py
-EOF
-                    chmod +x dist/start_jarvis.sh
-                    
-                    # Create archive
-                    tar -czf jarvis-build-${BUILD_NUMBER}.tar.gz dist/
-                    
-                    echo "Package created: jarvis-build-${BUILD_NUMBER}.tar.gz"
+                bat '''
+                    call venv\\Scripts\\activate.bat
+                    if not exist dist mkdir dist
+                    copy jarvis.py dist\\
+                    if exist jarvis_config.json (copy jarvis_config.json dist\\) else (echo {"start_mode": "normal"} > dist\\jarvis_config.json)
+                    copy requirements.txt dist\\
+                    if exist README.md copy README.md dist\\
+                    copy BUILD_INFO.txt dist\\
+                    (
+                    echo @echo off
+                    echo echo Starting JARVIS Voice Assistant...
+                    echo echo Make sure Ollama is running: ollama serve
+                    echo python jarvis.py
+                    ) > dist\\start_jarvis.bat
+                    tar -czf jarvis-build-%BUILD_NUMBER%.tar.gz dist/
+                    echo Package created: jarvis-build-%BUILD_NUMBER%.tar.gz
                 '''
             }
         }
@@ -224,8 +172,8 @@ EOF
             steps {
                 echo 'Archiving build artifacts...'
                 archiveArtifacts artifacts: 'jarvis-build-*.tar.gz,BUILD_INFO.txt,bandit-report.json', 
-                                     fingerprint: true,
-                                     allowEmptyArchive: true
+                                 fingerprint: true,
+                                 allowEmptyArchive: true
             }
         }
         
@@ -235,12 +183,10 @@ EOF
             }
             steps {
                 echo 'Deploying to test environment...'
-                sh '''
-                    # Extract package to test directory
-                    mkdir -p /var/jenkins_home/test-deployments/jarvis-${BUILD_NUMBER}
-                    tar -xzf jarvis-build-${BUILD_NUMBER}.tar.gz -C /var/jenkins_home/test-deployments/jarvis-${BUILD_NUMBER}
-                    
-                    echo "Deployed to: /var/jenkins_home/test-deployments/jarvis-${BUILD_NUMBER}"
+                bat '''
+                    if not exist "%JENKINS_HOME%\\test-deployments\\jarvis-%BUILD_NUMBER%" mkdir "%JENKINS_HOME%\\test-deployments\\jarvis-%BUILD_NUMBER%"
+                    tar -xzf jarvis-build-%BUILD_NUMBER%.tar.gz -C "%JENKINS_HOME%\\test-deployments\\jarvis-%BUILD_NUMBER%"
+                    echo Deployed to: %JENKINS_HOME%\\test-deployments\\jarvis-%BUILD_NUMBER%
                 '''
             }
         }
