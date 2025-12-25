@@ -76,7 +76,7 @@ bashpip install torch torchvision torchaudio --index-url https://download.pytorc
 Go to https://console.picovoice.ai
 Get your free Access Key
 Open jarvis.py → Find this line:
-pythonaccess_key='cvYTWOesCJFVMdkRuPRrC4jkWnfYOw0KaNv1amgJ1NcXexMHy3I01g=='
+pythonaccess_key=
 
 Replace with your key.
 
